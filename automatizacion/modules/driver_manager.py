@@ -4,7 +4,11 @@ from fake_useragent import UserAgent
 
 class DriverManager():
 
-    def __init__(self,init_user_agent: bool=True):
+    def __init__(
+            self,
+            init_user_agent:bool=True
+            ):
+        
         self.__driver = self.init_driver(init_user_agent)
         self.__driver.set_page_load_timeout(120)
     

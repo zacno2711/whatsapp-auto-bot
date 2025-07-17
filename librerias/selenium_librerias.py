@@ -26,7 +26,7 @@ class SeleniumLibrerias():
                 WebDriverWait(driver, 7).until(EC.url_to_be(url))
                 break
             except:
-                x += 1
+                count += 1
                 driver.get(url)
                 print(f"[ERROR] no se accedio a la url {count}")
                 continue
