@@ -13,7 +13,20 @@ from selenium.webdriver.common.by import By
 from librerias.generales_librerias import GeneralesLibrerias as gn_l
 
 class SeleniumLibrerias():
-    
+    @staticmethod
+    def click_by_js(driver:webdriver.Chrome,elemento):
+        driver.execute_script("arguments[0].click();", elemento)
+
+    @staticmethod
+    def obtener_atributos_elemento(driver:webdriver.Chrome,elemento) -> dict:
+        return driver.execute_script("""
+            var items = {}; 
+            for (index = 0; index < arguments[0].attributes.length; ++index) {
+                items[arguments[0].attributes[index].name] = arguments[0].attributes[index].value;
+            }
+            return items;
+        """, elemento)
+
     @staticmethod
     def esperar_carga(driver:webdriver.Chrome,by:By,value:str,ec:EC, implicitly_wait:int=5):
         try:
