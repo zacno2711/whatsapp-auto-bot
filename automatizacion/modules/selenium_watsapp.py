@@ -1,5 +1,6 @@
 import time
 import traceback
+import urllib.parse
 
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -96,6 +97,29 @@ class WhatsApp_slm(DriverManager):
             print(traceback.print_exc())
             print("[WARNING] no se pudo cerrar sesion")
         
-        
+    def generar_link_whatsapp(self, numero_telefono: str, mensaje: str) -> str:
+        """
+        Genera un enlace directo a WhatsApp Web con el número y mensaje especificado.
 
-        
+        Args:
+            numero_telefono (str): Número en formato internacional, sin '+', espacios ni guiones. Ej: '573001234567'
+            mensaje (str): Texto que se quiere enviar
+
+        Returns:
+            str: URL lista para abrir en WhatsApp Web
+        """
+        def validar_numero_telefono(numero_telefono: str) -> str:
+            numero_limpio = numero_telefono.replace("+", "").strip()
+
+            if not numero_limpio.isdigit():
+                raise ValueError(f"El número de teléfono '{numero_telefono}' no es válido. Revisar.")
+
+            return numero_limpio
+            
+        numero_telefono = validar_numero_telefono(numero_telefono)
+        mensaje_codificado = urllib.parse.quote(mensaje)
+        link = f"https://web.whatsapp.com/send?phone={numero_telefono}&text={mensaje_codificado}"
+        return link 
+
+    def enviar_mensaje_wpp(numero_telefono,mensaje,ruta_adjunto):
+        pass
