@@ -121,5 +121,6 @@ class WhatsApp_slm(DriverManager):
         link = f"https://web.whatsapp.com/send?phone={numero_telefono}&text={mensaje_codificado}"
         return link 
 
-    def enviar_mensaje_wpp(numero_telefono,mensaje,ruta_adjunto):
+    def enviar_mensaje_wpp(self,numero_telefono:str,mensaje:str,ruta_adjunto:str):
+        link_wpp = self.generar_link_whatsapp(numero_telefono,mensaje)
         pass
