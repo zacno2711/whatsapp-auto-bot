@@ -18,9 +18,9 @@ class WhatsApp_slm(DriverManager):
     def espera_carga_pantalla(self):
         slm_l.esperar_carga(
             driver = self.get_driver(),
-            by = By.NAME,
+            by = By.XPATH,
             ec=EC.presence_of_element_located,
-            value = "progress"
+            value = "//progress"
         )
 
     def abrir_wpp(self):
@@ -53,11 +53,11 @@ class WhatsApp_slm(DriverManager):
             boton_popup_continuar = driver.find_element(By.XPATH,'//div[@data-animate-modal-body]//button[contains(.,"Continue")]')
             print("[WARNING] existe un elemento con informacion")
             slm_l.click_by_js(driver,boton_popup_continuar)
-            print("[SUCCESS] popup cerrado")
+            print("✅ [SUCCESS] popup cerrado")
         except:
             pass
 
-        print("[SUCCESS] WhatsApp Cargado con exito")
+        print("✅ [SUCCESS] WhatsApp Cargado con exito")
 
     def elegir_boton_lateral_izquierdo_wpp(self,nombre_boton):
         """Nombres validos = ["Settings","Profile","Chats","Status","Channels","Communities"]"""
@@ -69,7 +69,7 @@ class WhatsApp_slm(DriverManager):
             if aria_pressed == "false":
                 return False
             elif aria_pressed == "true":
-                print(f"[SUCCESS] boton '{nombre_boton}' seleccionado")
+                print(f"✅ [SUCCESS] boton '{nombre_boton}' seleccionado")
                 return True
             raise Exception("el valor del atributo 'aria_pressed' no es valido")
         
@@ -92,12 +92,20 @@ class WhatsApp_slm(DriverManager):
             slm_l.click_by_js(driver, elemento_boton_log_out)
             elemento_2_boton_log_out = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,'//div[h1[contains(.,"Log out?")]]//button[contains(.,"Log out")]')))
             slm_l.click_by_js(driver, elemento_2_boton_log_out)
-            print("[SUCCESS] WatsApp deslogueado correctamente")
+            print("✅ [SUCCESS] WatsApp deslogueado correctamente")
         except Exception as e:
             print(traceback.print_exc())
             print("[WARNING] no se pudo cerrar sesion")
-        
-    def generar_link_whatsapp(self, numero_telefono: str, mensaje: str) -> str:
+
+    def validar_numero_telefono(self,numero_telefono: str) -> str:
+        numero_limpio = numero_telefono.replace("+", "").strip()
+
+        if not numero_limpio.isdigit():
+            raise ValueError(f"El número de teléfono '{numero_telefono}' no es válido. Revisar.")
+
+        return numero_limpio
+
+    def generar_link_whatsapp(self, numero_telefono: str, mensaje: str = None) -> str:
         """
         Genera un enlace directo a WhatsApp Web con el número y mensaje especificado.
 
@@ -108,19 +116,71 @@ class WhatsApp_slm(DriverManager):
         Returns:
             str: URL lista para abrir en WhatsApp Web
         """
-        def validar_numero_telefono(numero_telefono: str) -> str:
-            numero_limpio = numero_telefono.replace("+", "").strip()
-
-            if not numero_limpio.isdigit():
-                raise ValueError(f"El número de teléfono '{numero_telefono}' no es válido. Revisar.")
-
-            return numero_limpio
-            
-        numero_telefono = validar_numero_telefono(numero_telefono)
-        mensaje_codificado = urllib.parse.quote(mensaje)
-        link = f"https://web.whatsapp.com/send?phone={numero_telefono}&text={mensaje_codificado}"
+        if mensaje:
+            mensaje_codificado = urllib.parse.quote(mensaje)
+            link = f"https://web.whatsapp.com/send?phone={numero_telefono}&text={mensaje_codificado}"
+        else:
+            link = f"https://web.whatsapp.com/send?phone={numero_telefono}"
         return link 
 
-    def enviar_mensaje_wpp(self,numero_telefono:str,mensaje:str,ruta_adjunto:str):
+    def oprimir_boton_enviar(self):
+        driver = self.get_driver()
+        try:
+            boton_enviar = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,'//span[@data-icon="wds-ic-send-filled"]')))
+            slm_l.click_by_js(driver,boton_enviar)
+            print("[INFO] Boton enviar oprimido")
+        except Exception as e:
+            print(traceback.print_exc())
+            print(f"[ERROR] al intentar oprimir el boton enviar, {e}")
+
+    def enviar_mensaje_wpp(
+            self,
+            numero_telefono:str,
+            mensaje:str = None ,
+            # ruta_adjunto:str = None
+            ):
+        def validar_envio_mensaje():
+            try:
+                fraccion_mensaje_enviado = mensaje[:50].lower().strip()
+                ultimo_mensaje = driver.find_element(
+                    By.XPATH,
+                    '(//div[@class="copyable-text"]//span[contains(@class,"copyable-text")])[last()]'
+                ).text.lower().strip()
+                
+                print(f"[INFO] Último mensaje detectado: '{ultimo_mensaje}'")
+                print(f"[INFO] Fragmento del mensaje enviado: '{fraccion_mensaje_enviado}'")
+                
+                if fraccion_mensaje_enviado in ultimo_mensaje:
+                    print("✅ [SUCCESS] El mensaje fue enviado correctamente.")
+                    return True
+                else:
+                    print("❌ [ERROR] El fragmento del mensaje no coincide con el último mensaje recibido.")
+                    return False
+
+            except Exception as e:
+                print("❌ [ERROR] No se pudo validar el envío del mensaje. Posible diferencia entre lo esperado y lo recibido.")
+                print(f"❌ [DETALLE ERROR] {e}")
+                return False
+        
+        # if not mensaje and not ruta_adjunto: 
+        #     raise Exception("Es necesario un mensaje o un adjunto para enviar el mensaje por wpp")
+        
+        driver = self.get_driver()
+        numero_telefono = self.validar_numero_telefono(numero_telefono)
         link_wpp = self.generar_link_whatsapp(numero_telefono,mensaje)
-        pass
+        driver.get(link_wpp)
+        
+        # if ruta_adjunto:
+        #     try:
+        #         input_file = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,"//input")))
+        #         input_file.send_keys(ruta_adjunto)
+        #         print("[INFO] adjunto cargado en input")
+        #     except Exception as e:
+        #         raise Exception (f"No se pudo acceder al input para el adjunto, {e}")
+
+        self.oprimir_boton_enviar()
+        validar_envio_mensaje()
+        
+        
+        
+        
