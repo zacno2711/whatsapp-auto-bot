@@ -97,7 +97,10 @@ class WhatsApp_slm(DriverManager):
             print(traceback.print_exc())
             print("[WARNING] no se pudo cerrar sesion")
 
-    def validar_numero_telefono(self,numero_telefono: str) -> str:
+    @staticmethod
+    def validar_y_limpiar_numero_telefono(numero_telefono: str) -> str:
+        if not numero_telefono:
+            raise ValueError(f"El número de teléfono esta vacio. Revisar.")
         numero_limpio = numero_telefono.replace("+", "").strip()
 
         if not numero_limpio.isdigit():
@@ -166,7 +169,7 @@ class WhatsApp_slm(DriverManager):
         #     raise Exception("Es necesario un mensaje o un adjunto para enviar el mensaje por wpp")
         
         driver = self.get_driver()
-        numero_telefono = self.validar_numero_telefono(numero_telefono)
+        numero_telefono = WhatsApp_slm.validar_limpiar_numero_telefono(numero_telefono)
         link_wpp = self.generar_link_whatsapp(numero_telefono,mensaje)
         driver.get(link_wpp)
         
