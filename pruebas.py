@@ -1,4 +1,5 @@
 from automatizacion.modules.selenium_watsapp import WhatsApp_slm
+from automatizacion.main.main_workflow import MainWorkflow
 
 mensaje_prueba = (
     "Hola, este es un mensaje de prueba generado automáticamente para probar el funcionamiento del enlace de WhatsApp con un texto largo. "
@@ -11,26 +12,21 @@ mensaje_prueba = (
 )
 ruta_archivo = r"C:\Users\juanp\Downloads\imagen.jpeg"
 
-slm_wpp = WhatsApp_slm()
-slm_wpp.abrir_wpp()
-url = slm_wpp.enviar_mensaje_wpp(
-    numero_telefono="573052428530",
-    mensaje=mensaje_prueba,
-    # ruta_adjunto=ruta_archivo
+# slm_wpp = WhatsApp_slm()
+# slm_wpp.abrir_wpp()
+# url = slm_wpp.enviar_mensaje_wpp(
+#     numero_telefono="573052428530",
+#     mensaje=mensaje_prueba,
+#     # ruta_adjunto=ruta_archivo
+#     )
+# print("prueba")
+
+ruta_excel = r"C:\Users\juanp\Documents\proyecto_mensajes_asesores\cartera_prueba.xlsx"
+wpp = MainWorkflow(
+    ruta_excel=ruta_excel,
+    tipo_plantilla="cartera",
+    nombre_asistente="Luisa Maria Humanes",
+    nombre_asesor="Juan Pablo Zapata",
     )
-print("prueba")
 
-
-# import pywhatkit as kit
-# import datetime
-
-# # Datos del contacto
-# numero = "+573001234567"  # Número con código de país (ej: +57 para Colombia)
-# mensaje = "Hola, esto es un mensaje automático con pywhatkit 😄"
-
-# # Hora en la que se enviará (mínimo 1 minuto después de la hora actual)
-# hora_actual = datetime.datetime.now()
-# hora_envio = (hora_actual.hour, hora_actual.minute + 1)
-
-# # Enviar mensaje
-# kit.sendwhatmsg(numero, mensaje, hora_envio[0], hora_envio[1])
+wpp.enviar_mensajes_wpp()

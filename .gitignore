@@ -1,3 +1,31 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Archivos de entorno
+.env
+*.env
+.venv/
+venv/
+
+# Archivos de logs
+logs/
+*.log
+
+# Archivos temporales
+*.tmp
+*.bak
+*.swp
+
+# Archivos de pruebas
 *pruebas*
+
+# Archivos de Excel u otros binarios
+*.xlsx
+
+# IDEs y editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
