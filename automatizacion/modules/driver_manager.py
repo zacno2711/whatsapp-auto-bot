@@ -1,6 +1,8 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from fake_useragent import UserAgent
+import os
 
 class DriverManager():
 
@@ -16,6 +18,8 @@ class DriverManager():
         
 
         chromeOptions = Options()
+        # Silenciar mensajes como "DevTools listening..."
+        service = Service(log_path=os.devnull)  # Descarta el log
 
         # 1. User-Agent aleatorio
         if intit_user_agent:
@@ -38,7 +42,7 @@ class DriverManager():
         #     chromeOptions.add_argument("--disable-dev-shm-usage")
         #     chromeOptions.add_argument("--window-size=1920,1080")
 
-        driver = webdriver.Chrome(options=chromeOptions)
+        driver = webdriver.Chrome(service=service,options=chromeOptions)
 
         # 6. Confirmación
         print("User-Agent:", driver.execute_script("return navigator.userAgent;"))

@@ -1,5 +1,7 @@
 from automatizacion.modules.selenium_watsapp import WhatsApp_slm
 from automatizacion.main.main_workflow import MainWorkflow
+from automatizacion.templates_messages.templates import Templates
+
 
 mensaje_prueba = (
     "Hola, este es un mensaje de prueba generado automáticamente para probar el funcionamiento del enlace de WhatsApp con un texto largo. "
@@ -29,4 +31,4 @@ wpp = MainWorkflow(
     nombre_asesor="Juan Pablo Zapata",
     )
 
-wpp.enviar_mensajes_wpp()
+wpp.enviar_mensajes_wpp(Templates.cartera)

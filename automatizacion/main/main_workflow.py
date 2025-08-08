@@ -1,4 +1,5 @@
 import pandas as pd
+from typing import Callable
 from datetime import datetime
 
 from automatizacion.modules.selenium_watsapp import WhatsApp_slm
@@ -14,33 +15,43 @@ class MainWorkflow():
         self.nombre_asesor = nombre_asesor
         self.df_info = pd.read_excel(ruta_excel,dtype=str).fillna("")
 
-    def validar_df_info(self,df:pd.DataFrame) -> pd.DataFrame:
+    def validar_df_info(self,df:pd.DataFrame,tipo_template:str) -> pd.DataFrame:
         def validar_columnas(df:pd.DataFrame):
-            columnas_necesarias = [
-                "Telefono",
-                "Nombre Tomador",
-                "Ramo",
-                "numPoliza",
-                "fechaInicioVigencia",
-                "fechaFinVigencia"
-            ]
-
+            self.logger.info(f"=== VALIDANDO DF INSUMO PARA TEMPLATE = '{tipo_template}' ===")
+            if "cartera" in tipo_template.lower():
+                columnas_necesarias = [
+                    "Telefono",
+                    "nombreTomador",
+                    "Ramo",
+                    "numPoliza",
+                    "dias_mora"
+                    # "fechaInicioVigencia",
+                    # "fechaFinVigencia"
+                ]
+            elif "renovacion" in tipo_template.lower():
+                columnas_necesarias = [
+                    "Telefono",
+                    "nombreTomador",
+                    "Ramo",
+                    "numPoliza",
+                    "fechaInicioVigencia",
+                    "fechaFinVigencia"
+                ]
+            else:
+                e = f"la plantilla '{tipo_template}' no esta mapeada para validacion"
+                self.logger.error(e)
+                raise ValueError(e)
+            
             columnas_faltantes = [col for col in columnas_necesarias if col not in df.columns]
             columnas_extras = [col for col in df.columns if col not in columnas_necesarias]
 
-            # print("[INFO] Columnas en el DataFrame:", list(df.columns))
-            # print("[INFO] Columnas necesarias:", columnas_necesarias)
-
             if columnas_extras:
-                # print(f"⚠️ [WARNNING] Columnas no requeridas encontradas: {columnas_extras}")
                 self.logger.warning(f"Columnas no requeridas encontradas: {columnas_extras}")
 
             if columnas_faltantes:
                 e = f"Columnas faltantes: {columnas_faltantes}"
                 self.logger.error(e)
-                raise
-
-            # print("✅ [SUCCSESS] Todas las columnas necesarias están presentes.")
+                raise ValueError(e)
 
         def validar_fecha(fecha:str):
             if not isinstance(fecha, str):
@@ -143,21 +154,33 @@ class MainWorkflow():
 
         return df_info
 
-    def enviar_mensajes_wpp(self):
-        df_info = self.validar_df_info(self.df_info)
-        # slm_wpp = WhatsApp_slm()
-        # slm_wpp.abrir_wpp()
+    def enviar_mensajes_wpp(self,template_mensaje:Callable[[dict | pd.Series], str], probar_plantilla : bool = False):
+        df_info = self.validar_df_info(
+            df=self.df_info,
+            tipo_template=template_mensaje.__name__
+            )
+        
+        df_info = df_info.reset_index(drop=True)
+        df_info["nombre_asesor"] = self.nombre_asesor
+        df_info["nombre_asistente"] = self.nombre_asistente
+        df_info["mensaje"] = df_info.apply(template_mensaje,axis=1)
+        
+        if probar_plantilla:
+            self.logger.info(F"PRUEBA DE PLANTILLA -> '{df_info.iloc[0]["mensaje"]}'")
+            return
+        
+        slm_wpp = WhatsApp_slm()
+        slm_wpp.abrir_wpp()
 
-        # df_info = df_info.reset_index(drop=True)
-        # print(f"CANTIDAD DE MENSAJES A ENVIAR = {len(df_info)}")
+        self.logger.info(f"CANTIDAD DE MENSAJES A ENVIAR = {len(df_info)}")
 
-        # for i,info_msg in df_info.iterrows():
-        #     print("=="*5,f"{info_msg["Nombre"]}, {info_msg["numPoliza"]}, {info_msg["Telefono"]} [{i+1}-{len(df_info)}]","=="*5)
+        for i,info_msg in df_info.iterrows():
+            self.logger.info(f"{'=='*5} {info_msg['nombreTomador']}, {info_msg['numPoliza']}, {info_msg['Telefono']} [{i+1}-{len(df_info)}] {'=='*5}")
+
+            # mensaje = template_mensaje(**info_msg.to_dict())
             
-        #     mensaje = ""
-            
-        #     slm_wpp.enviar_mensaje_wpp(
-        #         numero_telefono = info_msg["Telefono"],
-        #         mensaje=mensaje,
-        #         # ruta_adjunto=ruta_archivo
-        #         )
+            slm_wpp.enviar_mensaje_wpp(
+                numero_telefono = info_msg["Telefono"],
+                mensaje = info_msg["mensaje"],
+                # ruta_adjunto=ruta_archivo
+                )

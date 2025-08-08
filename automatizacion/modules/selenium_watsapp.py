@@ -1,6 +1,8 @@
 import time
 import traceback
 import urllib.parse
+import inspect
+from librerias.logger_config import get_logger
 
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -12,6 +14,7 @@ from librerias.generales_librerias import GeneralesLibrerias as gn_l
 
 class WhatsApp_slm(DriverManager):
     def __init__(self):
+        self.logger = get_logger(self.__class__.__name__)
         self.url_wpp_web = "https://web.whatsapp.com/"
         super().__init__(init_user_agent=False)
     
@@ -27,22 +30,24 @@ class WhatsApp_slm(DriverManager):
         driver = self.get_driver()
         slm_l.ir_y_verificar_url(driver,self.url_wpp_web)
 
-        print("[INFO] WatsApp Abierto")
-        print("[INFO] Validando estado de la sesion")
+        self.logger.info("WatsApp Abierto")
+        self.logger.info("Validando estado de la sesion")
         
         
         count = 0
         while True:
             if count == 5:
-                raise Exception("no se pudo abrir wpp, por cantidad de intentos de lectura de QR fallidos")
+                e = "no se pudo abrir wpp, por cantidad de intentos de lectura de QR fallidos"
+                self.logger.error(e)
+                raise Exception(e)
             count += 1
             try:
                 elemento_qr = driver.find_element(By.XPATH,'//canvas[contains(@aria-label,"QR")]')
-                print(f"[INFO] QR presente, se debe escanear par continuar, {count}")
-                print("[INFO] escanea el QR para continuar")
+                self.logger.info(f"QR presente, se debe escanear par continuar, {count}")
+                self.logger.info("escanea el QR para continuar")
                 input("[INPUT] Oprime ENTER despues de escanear")
             except:
-                print("[INFO] QR escaneado con exito")
+                self.logger.info("✅ QR escaneado con exito")
                 time.sleep(10)
                 break
           
@@ -51,27 +56,28 @@ class WhatsApp_slm(DriverManager):
 
         try:
             boton_popup_continuar = driver.find_element(By.XPATH,'//div[@data-animate-modal-body]//button[contains(.,"Continue")]')
-            print("[WARNING] existe un elemento con informacion")
+            self.logger.warning("existe un popup")
             slm_l.click_by_js(driver,boton_popup_continuar)
-            print("✅ [SUCCESS] popup cerrado")
+            self.logger.info("✅ popup cerrado")
         except:
             pass
 
-        print("✅ [SUCCESS] WhatsApp Cargado con exito")
+        self.logger.info("✅ WhatsApp Cargado con exito")
 
     def elegir_boton_lateral_izquierdo_wpp(self,nombre_boton):
         """Nombres validos = ["Settings","Profile","Chats","Status","Channels","Communities"]"""
         def validar_aria_pressed(elemento_boton):
             aria_pressed = slm_l.obtener_atributos_elemento(driver,elemento_boton).get("aria-pressed",None)
-            print(f"aria-pressed = {aria_pressed}")
             if not aria_pressed:
                 raise Exception(f"el boton '//button[@aria-label={nombre_boton}' no tiene el atributo 'aria-pressed'")
             if aria_pressed == "false":
                 return False
             elif aria_pressed == "true":
-                print(f"✅ [SUCCESS] boton '{nombre_boton}' seleccionado")
+                self.logger.info(f"✅ boton '{nombre_boton}' seleccionado")
                 return True
-            raise Exception("el valor del atributo 'aria_pressed' no es valido")
+            e = "el valor del atributo 'aria_pressed' no es valido"
+            self.logger.error(e)
+            raise ValueError(e)
         
         driver = self.get_driver()
         elemento_boton = driver.find_element(By.XPATH,f'//button[@aria-label="{nombre_boton}"]')
@@ -92,19 +98,25 @@ class WhatsApp_slm(DriverManager):
             slm_l.click_by_js(driver, elemento_boton_log_out)
             elemento_2_boton_log_out = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,'//div[h1[contains(.,"Log out?")]]//button[contains(.,"Log out")]')))
             slm_l.click_by_js(driver, elemento_2_boton_log_out)
-            print("✅ [SUCCESS] WatsApp deslogueado correctamente")
+            self.logger.info("✅ WatsApp deslogueado correctamente")
         except Exception as e:
-            print(traceback.print_exc())
-            print("[WARNING] no se pudo cerrar sesion")
+            self.logger.exception(e)
+            self.logger.warning("no se pudo cerrar sesion")
 
     @staticmethod
     def validar_y_limpiar_numero_telefono(numero_telefono: str) -> str:
+
+        logger = get_logger(inspect.currentframe().f_code.co_name)
         if not numero_telefono:
-            raise ValueError(f"El número de teléfono esta vacio. Revisar.")
+            e = f"El número de teléfono esta vacio. Revisar."
+            logger.error(e)
+            raise ValueError(e)
         numero_limpio = numero_telefono.replace("+", "").strip()
 
         if not numero_limpio.isdigit():
-            raise ValueError(f"El número de teléfono '{numero_telefono}' no es válido. Revisar.")
+            e = f"El número de teléfono '{numero_telefono}' no es válido. Revisar."
+            logger.error(e)
+            raise ValueError(e)
 
         return numero_limpio
 
@@ -131,10 +143,11 @@ class WhatsApp_slm(DriverManager):
         try:
             boton_enviar = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,'//span[@data-icon="wds-ic-send-filled"]')))
             slm_l.click_by_js(driver,boton_enviar)
-            print("[INFO] Boton enviar oprimido")
+            self.logger.info("Boton enviar oprimido")
         except Exception as e:
-            print(traceback.print_exc())
-            print(f"[ERROR] al intentar oprimir el boton enviar, {e}")
+            e = f"al intentar oprimir el boton enviar, {e}"
+            self.logger.exception(e)
+            raise Exception(e)
 
     def enviar_mensaje_wpp(
             self,
@@ -144,32 +157,32 @@ class WhatsApp_slm(DriverManager):
             ):
         def validar_envio_mensaje():
             try:
-                fraccion_mensaje_enviado = mensaje[:50].lower().strip()
+                fraccion_mensaje_enviado = mensaje[:50].lower().strip().replace("*", "")
                 ultimo_mensaje = driver.find_element(
                     By.XPATH,
                     '(//div[@class="copyable-text"]//span[contains(@class,"copyable-text")])[last()]'
                 ).text.lower().strip()
                 
-                print(f"[INFO] Último mensaje detectado: '{ultimo_mensaje}'")
-                print(f"[INFO] Fragmento del mensaje enviado: '{fraccion_mensaje_enviado}'")
+                self.logger.info(f"Último mensaje detectado: '{ultimo_mensaje}'")
+                self.logger.info(f"Fragmento del mensaje enviado: '{fraccion_mensaje_enviado}'")
                 
                 if fraccion_mensaje_enviado in ultimo_mensaje:
-                    print("✅ [SUCCESS] El mensaje fue enviado correctamente.")
+                    self.logger.info("✅ El mensaje fue enviado correctamente.")
                     return True
                 else:
-                    print("❌ [ERROR] El fragmento del mensaje no coincide con el último mensaje recibido.")
+                    self.logger.error("❌ El fragmento del mensaje no coincide con el último mensaje recibido.")
                     return False
 
             except Exception as e:
-                print("❌ [ERROR] No se pudo validar el envío del mensaje. Posible diferencia entre lo esperado y lo recibido.")
-                print(f"❌ [DETALLE ERROR] {e}")
+                self.logger.error("❌ No se pudo validar el envío del mensaje. Posible diferencia entre lo esperado y lo recibido.")
+                self.logger.exception(f"❌ [DETALLE ERROR] {e}")
                 return False
         
         # if not mensaje and not ruta_adjunto: 
         #     raise Exception("Es necesario un mensaje o un adjunto para enviar el mensaje por wpp")
         
         driver = self.get_driver()
-        numero_telefono = WhatsApp_slm.validar_limpiar_numero_telefono(numero_telefono)
+        numero_telefono = WhatsApp_slm.validar_y_limpiar_numero_telefono(numero_telefono)
         link_wpp = self.generar_link_whatsapp(numero_telefono,mensaje)
         driver.get(link_wpp)
         
@@ -177,7 +190,7 @@ class WhatsApp_slm(DriverManager):
         #     try:
         #         input_file = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,"//input")))
         #         input_file.send_keys(ruta_adjunto)
-        #         print("[INFO] adjunto cargado en input")
+        #         print("adjunto cargado en input")
         #     except Exception as e:
         #         raise Exception (f"No se pudo acceder al input para el adjunto, {e}")
 
