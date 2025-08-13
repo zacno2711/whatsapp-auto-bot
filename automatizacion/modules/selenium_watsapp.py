@@ -7,6 +7,7 @@ from librerias.logger_config import get_logger
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
 
 from automatizacion.modules.driver_manager import DriverManager
 from librerias.selenium_librerias import SeleniumLibrerias as slm_l
@@ -144,59 +145,64 @@ class WhatsApp_slm(DriverManager):
             boton_enviar = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,'//span[@data-icon="wds-ic-send-filled"]')))
             slm_l.click_by_js(driver,boton_enviar)
             self.logger.info("Boton enviar oprimido")
+            return True
         except Exception as e:
             e = f"al intentar oprimir el boton enviar, {e}"
             self.logger.exception(e)
-            raise Exception(e)
+            return False
 
     def enviar_mensaje_wpp(
             self,
             numero_telefono:str,
             mensaje:str = None ,
-            # ruta_adjunto:str = None
             ):
-        def validar_envio_mensaje():
+        def validar_envio_mensaje() -> str:
             try:
-                fraccion_mensaje_enviado = mensaje[:50].lower().strip().replace("*", "")
-                ultimo_mensaje = driver.find_element(
-                    By.XPATH,
-                    '(//div[@class="copyable-text"]//span[contains(@class,"copyable-text")])[last()]'
-                ).text.lower().strip()
-                
-                self.logger.info(f"Último mensaje detectado: '{ultimo_mensaje}'")
-                self.logger.info(f"Fragmento del mensaje enviado: '{fraccion_mensaje_enviado}'")
-                
-                if fraccion_mensaje_enviado in ultimo_mensaje:
-                    self.logger.info("✅ El mensaje fue enviado correctamente.")
-                    return True
-                else:
-                    self.logger.error("❌ El fragmento del mensaje no coincide con el último mensaje recibido.")
-                    return False
+                time.sleep(2)
+                count = 0
+                while True:
+                    if count == 3:
+                        mensaje_result = "❌ el mensaje no fue encotrado en en el chat, revisar"
+                        self.logger.error(mensaje_result)
+                        return mensaje_result.strip()
+                    
+                    count += 1
+                    ultimo_mensaje = driver.find_element(
+                        By.XPATH,
+                        '(//div[@class="copyable-text"]//span[contains(@class,"copyable-text")])[last()]'
+                    ).text.lower().strip()
+                    self.logger.info(f"Último mensaje detectado: '{ultimo_mensaje}'") 
+                    
+                    fraccion_mensaje_enviado = mensaje[:50].lower().strip().replace("*", "")
+                    if fraccion_mensaje_enviado in ultimo_mensaje:
+                        mensaje_result = "✅ El mensaje fue enviado correctamente."
+                        self.logger.info(mensaje_result)
+                        return mensaje_result.strip()
+                    
+                    self.logger.error(f"Fraccion no encontrada en el ultimo mensaje, {count}")
+                    time.sleep(2)
+                    continue
 
             except Exception as e:
-                self.logger.error("❌ No se pudo validar el envío del mensaje. Posible diferencia entre lo esperado y lo recibido.")
-                self.logger.exception(f"❌ [DETALLE ERROR] {e}")
-                return False
+                mensaje_result = f"❌ No se pudo validar el envío del mensaje. Posible diferencia entre lo esperado y lo recibido., {e}"
+                self.logger.error(mensaje_result)
+                self.logger.exception(mensaje_result)
+                return mensaje_result.strip()
         
-        # if not mensaje and not ruta_adjunto: 
-        #     raise Exception("Es necesario un mensaje o un adjunto para enviar el mensaje por wpp")
+        result = {}
         
         driver = self.get_driver()
         numero_telefono = WhatsApp_slm.validar_y_limpiar_numero_telefono(numero_telefono)
         link_wpp = self.generar_link_whatsapp(numero_telefono,mensaje)
         driver.get(link_wpp)
         
-        # if ruta_adjunto:
-        #     try:
-        #         input_file = WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,"//input")))
-        #         input_file.send_keys(ruta_adjunto)
-        #         print("adjunto cargado en input")
-        #     except Exception as e:
-        #         raise Exception (f"No se pudo acceder al input para el adjunto, {e}")
 
-        self.oprimir_boton_enviar()
-        validar_envio_mensaje()
+        if not self.oprimir_boton_enviar():
+            result["result"] = "el boton enviar no pudo ser oprimido"
+            return result
         
+        result["result"] = validar_envio_mensaje()
+        return result
         
         
         
