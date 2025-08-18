@@ -19,7 +19,10 @@ logs/
 *.swp
 
 # Archivos de pruebas
+*prueba*
 *pruebas*
+pruebas.py
+*test.py
 
 # Archivos de Excel u otros binarios
 *.xlsx
